@@ -36,7 +36,7 @@ Begin
 		If RightLight = '0' and LeftLight = '0' Then
 			--reset the counter if both Right and Left Buttons are LOW
 			Counter <= 0;
-		ElsIf Clk'event and Clk='1' Then
+		ElsIf Clk_slow'event and Clk_slow='1' Then
 			If Reset='1' Then
 				y <= (others=>'0');
 				Counter <= 0;
