@@ -15,59 +15,55 @@ constant  myROM :room_type := ("000000","001000","011000","111000",--Sequence of
 signal Fast_Counter:std_logic_vector(25 downto 0):= (others=>'0');--define 25 bit counter.
 signal Clk_slow :std_logic;--define signal as the devided clock
 signal Counter :integer range 0 to 9:= 0;
-TYPE State is (R,L,B,E,Off);
-signal PS:State := Off;
+
 
 Begin
 	--Clock Divider
-	Process(Clk)--Define Process which sensetive to Clk and Rst.
+	Process(Clk)
 	Begin
 		if Fast_Counter = 50000000 Then
 			Fast_Counter <=(others=>'0');
-		Elsif Clk'event and Clk='1' Then --in the positive edge.
-			Fast_Counter <= Fast_Counter + 1;--increament the 25bit counter.
+		Elsif Clk'event and Clk='1' Then 
+			Fast_Counter <= Fast_Counter + 1;
 		End if;
 	End Process;
-	Clk_slow <= Fast_Counter(25);--assign the highest significant bit to the slow clock.
+	Clk_slow <= Clk;--Fast_Counter(25);--assign the highest significant bit to the slow clock.
 	
-
-	Process(Clk)
+	Process(Clk_slow)
 	Begin
-		If RightLight = '0' and LeftLight = '0' Then
-			--reset the counter if both Right and Left Buttons are LOW
-			Counter <= 0;
-		ElsIf Clk_slow'event and Clk_slow='1' Then
-			If Reset='1' Then
-				y <= (others=>'0');
-				Counter <= 0;
-			ElsIf RightLight= '1' and LeftLight = '1' Then
-				y <= (others=>'1');
-			ElsIf Haz= '1' Then
-				If Counter >= 1 Then
-					Counter <= 0;
+		If Clk_slow'event and Clk_slow='0' Then--in the raising edge :
+			If Reset='1' Then --if reset is HIGH :
+				Counter <= 8; -- Address to Turn off the lights
+			ElsIf RightLight= '1' and LeftLight = '1' Then-- if Brake is ON:
+				Counter <= 9; --Address to Turn on the lights
+			ElsIf Haz= '1' Then -- If Hazard is ON:
+				-- Toggle between Address 8 and 9 to get the Hazard outputs from the ROM
+				If Counter = 8 Then
+					Counter <= 9;
 				Else
-					Counter <= Counter + 1;
+					Counter <= 8;
 				End if;
-				y <= myROM(Counter+8);
-			ElsIf RightLight= '1' Then
+			ElsIf RightLight= '1' Then -- If Trun Right is ON: 
+				-- Keep alternating between Addresses 0 and 3 to get Turn Right outputs from ROM
 				If Counter >= 4 Then
 					Counter <= 0;
 				Else
 					Counter <= Counter + 1;
 				End if;
-				y <= myROM(Counter+4);
-			ElsIf LeftLight= '1' Then
-				If Counter >= 4 Then
-					Counter <= 0;
+			ElsIf LeftLight= '1' Then -- If Trun Left is ON: 
+				-- Keep alternating between Addresses 4 and 7 to get Turn Right outputs from ROM
+				If (Counter < 4) OR (Counter > 7) Then
+					Counter <= 4;
 				Else
 					Counter <= Counter + 1;
 				End if;
-				y <= myROM(Counter);
 			Else
-				y <= (others=>'0');
-				Counter <= 0;
+				--Otherwise turn all lights off
+				Counter <= 8; -- Address to Turn off the lights
 			End if;
 		End if;
 	End Process;
+	--Read from the ROM
+	y <= myROM(Counter);
 End;
 
